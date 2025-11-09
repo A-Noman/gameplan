@@ -39,16 +39,37 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Uncomment the following block to protect routes that require authentication
-  // if (
-  //   !user &&
-  //   !request.nextUrl.pathname.startsWith("/login") &&
-  //   !request.nextUrl.pathname.startsWith("/auth")
-  // ) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = "/login";
-  //   return NextResponse.redirect(url);
-  // }
+  // Protect all routes except login and auth callback routes
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith("/login") &&
+    !request.nextUrl.pathname.startsWith("/auth")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    // Preserve the original destination so we can redirect after login
+    url.searchParams.set("redirect", request.nextUrl.pathname);
+    const redirectResponse = NextResponse.redirect(url);
+    // Preserve cookies from supabaseResponse
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
+  }
+
+  // Redirect authenticated users away from login page to home
+  if (user && request.nextUrl.pathname.startsWith("/login")) {
+    const redirectTo = request.nextUrl.searchParams.get("redirect") || "/";
+    const url = request.nextUrl.clone();
+    url.pathname = redirectTo;
+    url.searchParams.delete("redirect");
+    const redirectResponse = NextResponse.redirect(url);
+    // Preserve cookies from supabaseResponse
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
+  }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
