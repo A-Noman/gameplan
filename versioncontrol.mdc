@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+---
+
+# AI Workflow & Version Control
+
+## Scope Management
+
+- **Keep changes focused** - When working on a feature or task, limit changes to only what's necessary for that specific feature
+- **One feature per commit** - Each major piece of work should be in its own commit with a clear, descriptive commit message
+- **Avoid scope creep** - Don't mix multiple unrelated features, refactoring, or fixes in a single set of changes
+- **Break down large tasks** - If a feature is complex, break it into smaller, logical commits that build upon each other
+
+## Commit Organization
+
+- **Atomic commits** - Each commit should represent a complete, working unit of change
+- **Clear commit messages** - Write descriptive commit messages that explain what was changed and why
+- **Separate concerns** - Keep code changes, dependency updates, and configuration changes in separate commits when possible
+- **Don't bundle unrelated changes** - If fixing a bug while working on a feature, consider separate commits
+
+## Code Changes
+
+- **Minimal necessary changes** - Only modify files that are directly related to the current task
+- **Avoid unnecessary refactoring** - Don't refactor unrelated code unless it's part of the explicit task
+- **Test your changes** - Ensure all changes work together before marking a task complete
+- **Clean up as you go** - Remove debug code, console.logs, and temporary files before completing a feature
