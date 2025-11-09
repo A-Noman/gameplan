@@ -1,8 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ProfileForm } from "@/components/auth/profile-form";
+import { getProfile } from "@/app/actions/profile";
+import { getEvents, getUniqueEventTypes } from "@/app/actions/events";
 import { redirect } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EventFilter } from "@/components/events/event-filter";
+import { Suspense } from "react";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ eventType?: string; search?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -13,24 +29,150 @@ export default async function Home() {
     redirect("/login");
   }
 
+  // Check if user has a profile with name
+  const { profile } = await getProfile();
+  const hasName = profile?.first_name;
+  const displayName = hasName ? `${profile.first_name}` : user.email;
+
+  // Get search params
+  const params = await searchParams;
+  const eventTypeFilter = params.eventType;
+  const searchQuery = params.search;
+
+  // Fetch unique event types and events if user has a name
+  const [eventTypesResult, eventsResult] = hasName
+    ? await Promise.all([
+        getUniqueEventTypes(),
+        getEvents(eventTypeFilter, searchQuery),
+      ])
+    : [
+        { eventTypes: null, error: null },
+        { events: null, error: null },
+      ];
+
+  const eventTypes = eventTypesResult.eventTypes || [];
+  const eventsError = eventsResult.error;
+  const events = eventsResult.events;
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-center font-mono text-sm">
-        <h1 className="text-4xl font-bold text-center mb-4">GamePlan</h1>
-        <p className="text-center text-muted-foreground mb-8">
-          Event Management Application
-        </p>
-        <div className="flex flex-col items-center gap-4">
-          <div className="text-center">
-            <p className="text-lg font-semibold">Welcome, {user.email}!</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              You are successfully authenticated.
-            </p>
+    <main className="flex min-h-screen flex-col p-8">
+      <div className="max-w-7xl w-full mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold">GamePlan</h1>
           </div>
           <LogoutButton />
         </div>
+
+        {!hasName ? (
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Complete Your Profile</CardTitle>
+                <CardDescription>
+                  Please provide your name to continue.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProfileForm />
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <>
+            {/* Welcome Message */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold">
+                Welcome, {displayName}!
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                We&apos;ll see you at the game
+              </p>
+            </div>
+
+            {/* Event Filter */}
+            {eventTypes.length > 0 && (
+              <div className="mb-6">
+                <Suspense
+                  fallback={
+                    <div className="h-10 w-[180px] bg-muted animate-pulse rounded-md" />
+                  }
+                >
+                  <EventFilter
+                    eventTypes={eventTypes}
+                    label="Filter by Sport"
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {/* Error State */}
+            {eventsError && (
+              <Card className="mb-6 border-destructive">
+                <CardHeader>
+                  <CardTitle className="text-destructive">Error</CardTitle>
+                  <CardDescription>{eventsError}</CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {/* Empty State */}
+            {!eventsError && events && events.length === 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>No Events Found</CardTitle>
+                  <CardDescription>
+                    {eventTypeFilter || searchQuery
+                      ? "Try adjusting your filters or search terms."
+                      : "There are no events in the database yet."}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {/* Events Grid */}
+            {!eventsError && events && events.length > 0 && (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {events.map((event) => (
+                  <Card key={event.id} className="flex flex-col">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-xl">{event.name}</CardTitle>
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+                          {event.event_type}
+                        </span>
+                      </div>
+                      <CardDescription>
+                        {new Date(event.event_date).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                          {event.description}
+                        </p>
+                      )}
+                      <div className="mt-auto pt-4 border-t">
+                        <p className="text-sm font-medium">📍 {event.venue}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </main>
   );
 }
-
