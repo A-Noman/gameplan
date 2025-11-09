@@ -1,0 +1,147 @@
+---
+alwaysApply: true
+---
+
+# Frontend Rules
+
+## Component Architecture
+
+### Server Components vs Client Components
+
+- **Default to Server Components** - Use Server Components by default for better performance
+- **Use Client Components only when necessary** - Add `'use client'` directive only when you need:
+  - Interactivity (onClick, onChange, etc.)
+  - React hooks (useState, useEffect, useContext, etc.)
+  - Browser APIs (window, document, localStorage, etc.)
+  - Event listeners
+  - Animation libraries that require client-side JavaScript
+- **Minimize client component boundaries** - Keep client components small and isolate them to leaf nodes when possible
+- **Compose Server and Client Components** - Server Components can import and render Client Components
+
+## UI Components & Styling
+
+### ShadCN/ui Components
+
+- Use ShadCN components throughout the application for consistency
+- Install new ShadCN components as needed using the CLI: `npx shadcn@latest add [component-name]`
+- Customize ShadCN components by modifying their files in `components/ui/` directory
+- Follow ShadCN component patterns and composition
+
+### Forms
+
+- **Always use ShadCN Form component** with react-hook-form for all forms
+- Reference the ShadCN form docs: https://ui.shadcn.com/docs/components/form
+- Implement proper form validation using react-hook-form and Zod schemas
+- Provide clear validation error messages
+- Disable submit buttons during form submission
+- Reset forms after successful submission
+
+### Styling with Tailwind CSS
+
+- Maintain consistent styling throughout the application with Tailwind CSS
+- Use Tailwind utility classes instead of custom CSS when possible
+- Follow the project's Tailwind configuration for custom colors, spacing, and design tokens
+- Use Tailwind's responsive utilities (sm:, md:, lg:, xl:, 2xl:) for responsive design
+- Leverage Tailwind's dark mode utilities if dark mode is implemented
+- Avoid inline styles unless absolutely necessary
+
+## Data Fetching & Server Actions
+
+- **Never make direct database calls from client components**
+- Use Server Actions for all data mutations and server-side operations
+- Call Server Actions from Client Components using the action prop or form actions
+- Use Server Components for data fetching when possible (better performance)
+- Handle loading states when calling Server Actions from Client Components
+- Use React's `useActionState` or `useFormState` hooks for form actions when appropriate
+
+## User Experience
+
+### Loading States
+
+- Include loading states and UI loading indicators for all async operations
+- Use Suspense boundaries for Server Component data fetching
+- Show skeleton loaders or spinners during data fetching
+- Disable interactive elements (buttons, inputs) during loading states
+- Use ShadCN's Skeleton component for content placeholders
+
+### Error Handling
+
+- Implement elegant error handling with UI error notifications
+- Use error boundaries for React error handling
+- Display user-friendly error messages (never expose technical details to users)
+- Log errors appropriately for debugging
+- Provide actionable error messages (tell users what they can do)
+- Use ShadCN's Alert component for error displays
+
+### Toast Notifications
+
+- Use toast notifications for success/error states and user feedback
+- Toast notifications should appear in the **top right** of the app
+- Use ShadCN's Toast/ToastProvider component (via Sonner or similar)
+- Keep toast messages concise and actionable
+- Auto-dismiss toasts after appropriate duration (3-5 seconds for success, longer for errors)
+- Show loading toasts for long-running operations
+
+## State Management
+
+- Use React's built-in state management (useState, useReducer) for local component state
+- Use React Context for shared state that doesn't need persistence
+- Prefer Server Components and Server Actions over complex client-side state management
+- Use URL search params for shareable/filterable state when appropriate
+- Avoid prop drilling - use Context or Server Components for data passing
+- Consider Zustand or similar lightweight state management only if truly needed
+
+## Type Safety
+
+- Use TypeScript for all components and utilities
+- Define proper types for all props using TypeScript interfaces or types
+- Use Supabase-generated types when working with database data
+- Avoid `any` type - use `unknown` and type guards if necessary
+- Leverage TypeScript's type inference when possible
+- Define shared types in a `types/` directory
+
+## Performance Optimization
+
+- Use Next.js Image component for all images (never use `<img>` tag)
+- Implement code splitting by default (Next.js handles this automatically)
+- Use dynamic imports (`next/dynamic`) for heavy client components
+- Optimize bundle size by avoiding unnecessary dependencies
+- Use React.memo() for expensive components that re-render frequently
+- Implement proper key props for lists to optimize re-renders
+- Lazy load components that are below the fold
+
+## Accessibility
+
+- Use semantic HTML elements (nav, main, article, section, etc.)
+- Ensure all interactive elements are keyboard accessible
+- Add proper ARIA labels for screen readers
+- Maintain proper heading hierarchy (h1 → h2 → h3)
+- Ensure sufficient color contrast for text (WCAG AA minimum)
+- Provide alternative text for images
+- Test with keyboard navigation and screen readers
+
+## Responsive Design
+
+- Design mobile-first using Tailwind's responsive utilities
+- Test on multiple screen sizes (mobile, tablet, desktop)
+- Ensure touch targets are at least 44x44px on mobile
+- Use responsive typography with Tailwind's text size utilities
+- Implement proper spacing for different screen sizes
+
+## Code Organization
+
+- Organize components by feature when possible
+- Keep components small and focused on a single responsibility
+- Extract reusable logic into custom hooks
+- Use barrel exports (index.ts) for component directories when helpful
+- Follow Next.js App Router conventions for file structure
+- Place shared components in `components/` directory
+- Place page-specific components in the same directory as the page
+
+## SEO & Metadata
+
+- Use Next.js Metadata API for page metadata (title, description, etc.)
+- Implement proper Open Graph tags for social sharing
+- Use semantic HTML for better SEO
+- Ensure all pages have unique, descriptive titles
+- Add alt text to all images for SEO benefits

@@ -1,0 +1,22 @@
+---
+alwaysApply: true
+---
+
+# Tech Stack
+
+This project uses the following technology stack:
+
+## Core Framework
+- **Next.js 15+** with App Router architecture
+- **TypeScript** as the primary language
+
+## Backend & Database
+- **Supabase** for database and backend services
+- **Supabase Auth** for authentication (supports Email and Google SSO)
+
+## Frontend & Styling
+- **Tailwind CSS** for styling
+- **Shadcn/ui** for UI components
+
+## Deployment
+- **Netlify** for hosting and deployment

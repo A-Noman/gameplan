@@ -1,0 +1,63 @@
+---
+alwaysApply: true
+---
+
+# Backend Rules
+
+## Server-Side Database Interactions
+
+All database interactions must happen server-side:
+- Server Actions (preferred)
+- Server Components
+- API Routes (only when absolutely necessary)
+
+**Never** make direct Supabase client calls from client components. Always use server actions or server components for database operations.
+
+## Server Actions vs API Routes
+
+Prioritize Server Actions over API Routes. Prefer not having any API routes and only using Actions unless absolutely needed (e.g., webhooks, third-party integrations that require specific route formats).
+
+## Supabase Client Setup
+
+- Use `createServerClient` or `createClient` with proper server-side configuration in server actions/components
+- Always use environment variables for Supabase URL and service role key (never expose service role key to client)
+- Use the authenticated user's session for Row Level Security (RLS) policies
+
+## Authentication & Authorization
+
+- Always verify user authentication in server actions before database operations
+- Use Supabase Auth helpers for server-side session management
+- Respect RLS policies - don't bypass them with service role unless absolutely necessary
+- Check user permissions before performing sensitive operations
+
+## Type Safety
+
+- Use Supabase-generated TypeScript types for database schemas
+- Create generic helper functions to ensure type safety throughout the application
+- Define shared types/interfaces for common data structures
+- Use TypeScript's type inference for Supabase queries when possible
+
+## Error Handling
+
+- Implement consistent error handling patterns across all server actions
+- Return structured error responses (not raw database errors) to clients
+- Log errors server-side for debugging
+- Provide user-friendly error messages while keeping sensitive details server-side
+- Handle Supabase-specific errors (e.g., RLS violations, constraint violations) appropriately
+
+## Database Query Patterns
+
+- Use Supabase query builder for type-safe queries
+- Implement pagination for large datasets
+- Use transactions when multiple related operations need to be atomic
+- Optimize queries to avoid N+1 problems
+- Use select() to limit returned columns for better performance
+
+## Security Best Practices
+
+- Never expose sensitive data in error messages
+- Validate and sanitize all user inputs server-side
+- Use parameterized queries (Supabase handles this, but be aware)
+- Implement rate limiting for sensitive operations
+- Store secrets in environment variables (never commit to version control)
+
