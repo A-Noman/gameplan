@@ -39,9 +39,6 @@ export default async function Home() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold">GamePlan</h1>
-            <p className="text-muted-foreground mt-2">
-              Event Management Application
-            </p>
           </div>
           <LogoutButton />
         </div>
