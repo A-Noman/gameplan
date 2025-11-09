@@ -17,7 +17,7 @@ import { Suspense } from "react";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ eventType?: string }>;
+  searchParams: Promise<{ eventType?: string; search?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -37,10 +37,14 @@ export default async function Home({
   // Get search params
   const params = await searchParams;
   const eventTypeFilter = params.eventType;
+  const searchQuery = params.search;
 
   // Fetch unique event types and events if user has a name
   const [eventTypesResult, eventsResult] = hasName
-    ? await Promise.all([getUniqueEventTypes(), getEvents(eventTypeFilter)])
+    ? await Promise.all([
+        getUniqueEventTypes(),
+        getEvents(eventTypeFilter, searchQuery),
+      ])
     : [
         { eventTypes: null, error: null },
         { events: null, error: null },
@@ -118,8 +122,8 @@ export default async function Home({
                 <CardHeader>
                   <CardTitle>No Events Found</CardTitle>
                   <CardDescription>
-                    {eventTypeFilter
-                      ? `No events found for "${eventTypeFilter}".`
+                    {eventTypeFilter || searchQuery
+                      ? "Try adjusting your filters or search terms."
                       : "There are no events in the database yet."}
                   </CardDescription>
                 </CardHeader>

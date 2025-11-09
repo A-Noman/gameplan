@@ -13,7 +13,7 @@ export type Event = {
   updated_at: string;
 };
 
-export async function getEvents(eventType?: string) {
+export async function getEvents(eventType?: string, searchTerm?: string) {
   const supabase = await createClient();
 
   const {
@@ -31,6 +31,12 @@ export async function getEvents(eventType?: string) {
 
   if (eventType) {
     query = query.eq("event_type", eventType);
+  }
+
+  const trimmedSearch = searchTerm?.trim();
+
+  if (trimmedSearch) {
+    query = query.ilike("name", `%${trimmedSearch}%`);
   }
 
   const { data: events, error } = await query.order("event_date", {
