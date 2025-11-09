@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ProfileForm } from "@/components/auth/profile-form";
 import { getProfile } from "@/app/actions/profile";
-import { getEvents } from "@/app/actions/events";
+import { getEvents, getUniqueEventTypes } from "@/app/actions/events";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -11,8 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EventFilter } from "@/components/events/event-filter";
+import { Suspense } from "react";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ eventType?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,10 +34,21 @@ export default async function Home() {
   const hasName = profile?.first_name;
   const displayName = hasName ? `${profile.first_name}` : user.email;
 
-  // Fetch events if user has a name
-  const { events, error } = hasName
-    ? await getEvents()
-    : { events: null, error: null };
+  // Get search params
+  const params = await searchParams;
+  const eventTypeFilter = params.eventType;
+
+  // Fetch unique event types and events if user has a name
+  const [eventTypesResult, eventsResult] = hasName
+    ? await Promise.all([getUniqueEventTypes(), getEvents(eventTypeFilter)])
+    : [
+        { eventTypes: null, error: null },
+        { events: null, error: null },
+      ];
+
+  const eventTypes = eventTypesResult.eventTypes || [];
+  const eventsError = eventsResult.error;
+  const events = eventsResult.events;
 
   return (
     <main className="flex min-h-screen flex-col p-8">
@@ -69,30 +86,48 @@ export default async function Home() {
               </p>
             </div>
 
+            {/* Event Filter */}
+            {eventTypes.length > 0 && (
+              <div className="mb-6">
+                <Suspense
+                  fallback={
+                    <div className="h-10 w-[180px] bg-muted animate-pulse rounded-md" />
+                  }
+                >
+                  <EventFilter
+                    eventTypes={eventTypes}
+                    label="Filter by Sport"
+                  />
+                </Suspense>
+              </div>
+            )}
+
             {/* Error State */}
-            {error && (
+            {eventsError && (
               <Card className="mb-6 border-destructive">
                 <CardHeader>
                   <CardTitle className="text-destructive">Error</CardTitle>
-                  <CardDescription>{error}</CardDescription>
+                  <CardDescription>{eventsError}</CardDescription>
                 </CardHeader>
               </Card>
             )}
 
             {/* Empty State */}
-            {!error && events && events.length === 0 && (
+            {!eventsError && events && events.length === 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>No Events Found</CardTitle>
                   <CardDescription>
-                    There are no events in the database yet.
+                    {eventTypeFilter
+                      ? `No events found for "${eventTypeFilter}".`
+                      : "There are no events in the database yet."}
                   </CardDescription>
                 </CardHeader>
               </Card>
             )}
 
             {/* Events Grid */}
-            {!error && events && events.length > 0 && (
+            {!eventsError && events && events.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {events.map((event) => (
                   <Card key={event.id} className="flex flex-col">

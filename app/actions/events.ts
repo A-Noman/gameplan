@@ -13,7 +13,7 @@ export type Event = {
   updated_at: string;
 };
 
-export async function getEvents() {
+export async function getEvents(eventType?: string) {
   const supabase = await createClient();
 
   const {
@@ -27,10 +27,15 @@ export async function getEvents() {
     };
   }
 
-  const { data: events, error } = await supabase
-    .from("events")
-    .select("*")
-    .order("event_date", { ascending: true });
+  let query = supabase.from("events").select("*");
+
+  if (eventType) {
+    query = query.eq("event_type", eventType);
+  }
+
+  const { data: events, error } = await query.order("event_date", {
+    ascending: true,
+  });
 
   if (error) {
     return {
@@ -78,7 +83,7 @@ export async function getEventById(id: string) {
   };
 }
 
-export async function getEventsByType(eventType: string) {
+export async function getUniqueEventTypes() {
   const supabase = await createClient();
 
   const {
@@ -88,26 +93,29 @@ export async function getEventsByType(eventType: string) {
   if (!user) {
     return {
       error: "Not authenticated",
-      events: null,
+      eventTypes: null,
     };
   }
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("*")
-    .eq("event_type", eventType)
-    .order("event_date", { ascending: true });
+    .select("event_type");
 
   if (error) {
     return {
       error: error.message,
-      events: null,
+      eventTypes: null,
     };
   }
 
+  // Get unique event types and sort them
+  const uniqueEventTypes = Array.from(
+    new Set(events.map((event) => event.event_type))
+  ).sort();
+
   return {
     error: null,
-    events: events as Event[],
+    eventTypes: uniqueEventTypes,
   };
 }
 
