@@ -44,6 +44,7 @@ cp env.example .env.local
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (optional, for server-side operations)
+- `NEXT_PUBLIC_SITE_URL`: Your site URL (required for OAuth callbacks). For development, use `http://localhost:3000`. For production, use your production URL (e.g., `https://yourdomain.com`)
 
 5. Run the development server:
 ```bash
@@ -61,17 +62,44 @@ pnpm dev
 ```
 gameplan/
 ├── app/                    # Next.js App Router pages and layouts
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Home page
-│   └── globals.css        # Global styles
-├── components/            # React components
-│   └── ui/               # Shadcn/ui components
-├── lib/                  # Utility functions and configurations
-│   ├── supabase/         # Supabase client utilities
-│   └── utils.ts          # General utilities
-├── public/               # Static assets
-└── middleware.ts         # Next.js middleware for auth
+│   ├── actions/           # Server actions
+│   │   └── auth.ts       # Authentication server actions
+│   ├── auth/             # Authentication routes
+│   │   └── callback/     # OAuth callback route
+│   ├── login/            # Login page
+│   ├── layout.tsx        # Root layout
+│   ├── page.tsx          # Home page
+│   └── globals.css       # Global styles
+├── components/           # React components
+│   ├── auth/            # Authentication components
+│   │   ├── login-form.tsx
+│   │   └── logout-button.tsx
+│   └── ui/              # Shadcn/ui components
+├── lib/                 # Utility functions and configurations
+│   ├── supabase/        # Supabase client utilities
+│   └── utils.ts         # General utilities
+├── public/              # Static assets
+└── middleware.ts        # Next.js middleware for auth
 ```
+
+## Authentication
+
+The application uses Supabase Authentication with the following features:
+
+- **Email/Password Authentication**: Users can sign up and sign in with email and password
+- **Google OAuth**: Users can sign in with their Google account
+- **Protected Routes**: All routes are protected by default. Unauthenticated users are redirected to the login page
+- **Session Management**: Sessions are managed server-side using Supabase SSR helpers
+- **Automatic Redirects**: After login, users are redirected to their intended destination or the home page
+
+### Setting up Google OAuth
+
+1. Go to your Supabase project dashboard
+2. Navigate to Authentication > Providers
+3. Enable Google provider
+4. Add your Google OAuth credentials (Client ID and Client Secret)
+5. Add your callback URL to the allowed redirect URLs: `https://yourdomain.com/auth/callback` (or `http://localhost:3000/auth/callback` for development)
+6. Make sure `NEXT_PUBLIC_SITE_URL` is set in your environment variables
 
 ## Development
 
