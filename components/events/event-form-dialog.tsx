@@ -80,24 +80,13 @@ export function EventFormDialog({
     defaultValues: initialValues,
   });
 
-  const shouldUseCustomType = useMemo(() => {
-    if (event?.event_type) {
-      return !eventTypes.includes(event.event_type);
-    }
-
-    return eventTypes.length === 0;
-  }, [event?.event_type, eventTypes]);
-
-  const [useCustomType, setUseCustomType] = useState(shouldUseCustomType);
-
   useEffect(() => {
     if (open) {
       form.reset(initialValues);
       form.clearErrors();
       setFormError(null);
-      setUseCustomType(shouldUseCustomType);
     }
-  }, [open, form, initialValues, shouldUseCustomType]);
+  }, [open, form, initialValues]);
 
   const title = mode === "create" ? "Create Event" : "Edit Event";
   const description =
@@ -202,57 +191,24 @@ export function EventFormDialog({
                 <FormItem>
                   <FormLabel>Event Type</FormLabel>
                   <FormControl>
-                    {useCustomType ? (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="e.g. Basketball"
-                          value={field.value ?? ""}
-                          disabled={isPending}
-                          onChange={(event) =>
-                            field.onChange(event.target.value)
-                          }
-                        />
-                        {eventTypes.length > 0 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={isPending}
-                            onClick={() => {
-                              setUseCustomType(false);
-                              form.setValue("eventType", eventTypes[0] ?? "");
-                            }}
-                          >
-                            Browse
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          if (value === "__custom") {
-                            setUseCustomType(true);
-                            form.setValue("eventType", "");
-                            return;
-                          }
-
-                          field.onChange(value);
-                        }}
-                        disabled={isPending}
-                      >
-                        <SelectTrigger disabled={isPending}>
-                          <SelectValue placeholder="Select a sport" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {eventTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="__custom">Other...</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                      }}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger disabled={isPending}>
+                        <SelectValue placeholder="Select a sport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eventTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
