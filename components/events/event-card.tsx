@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-import { Pencil, Trash } from "lucide-react";
+import { useMemo, useTransition } from "react";
+import { CalendarPlus, Pencil, Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 import { toast } from "@/components/ui/sonner";
 import type { Event } from "@/types";
 import { EventFormDialog } from "@/components/events/event-form-dialog";
+import { buildICSFromEvent } from "@/lib/utils/ics";
 
 const eventActionsPromise = import("@/app/actions/events");
 
@@ -30,6 +31,40 @@ export function EventCard({
 }: EventCardProps) {
   const [isDeleting, startDeleteTransition] = useTransition();
   const isOwner = event.created_by === currentUserId;
+  const calendarFileName = useMemo(() => {
+    const slug = event.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return `${slug.length > 0 ? slug : "event"}-${event.id}.ics`;
+  }, [event.id, event.name]);
+
+  const handleAddToCalendar = () => {
+    try {
+      const icsContent = buildICSFromEvent(event, {
+        eventUrl: window.location.href,
+      });
+
+      const blob = new Blob([icsContent], {
+        type: "text/calendar;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = calendarFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Calendar invite downloaded.");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "We couldn't generate the calendar invite. Please try again."
+      );
+    }
+  };
 
   const handleDelete = () => {
     if (!isOwner) return;
@@ -74,30 +109,40 @@ export function EventCard({
         )}
         <div className="mt-auto flex flex-col gap-3 border-t pt-4">
           <p className="text-sm font-medium">📍 {event.venue}</p>
-          {isOwner && (
-            <div className="flex flex-wrap gap-2">
-              <EventFormDialog
-                mode="edit"
-                event={event}
-                eventTypes={eventTypes}
-                trigger={
-                  <Button size="sm" variant="outline">
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                }
-              />
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isDeleting}
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleAddToCalendar}
+            >
+              <CalendarPlus className="mr-2 h-4 w-4" />
+              Add to my calendar
+            </Button>
+            {isOwner && (
+              <>
+                <EventFormDialog
+                  mode="edit"
+                  event={event}
+                  eventTypes={eventTypes}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
