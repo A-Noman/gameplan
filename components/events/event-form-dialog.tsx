@@ -260,7 +260,7 @@ export function EventFormDialog({
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Share any details players should know..."
+                      placeholder="Share any details about the event that people should know..."
                       value={field.value ?? ""}
                       disabled={isPending}
                       onChange={field.onChange}
