@@ -30,14 +30,18 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const signupSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const signupSchema = z
+  .object({
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z
+      .string()
+      .min(6, "Password must be at least 6 characters"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -78,16 +82,23 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     setIsLoading(true);
     setError(null);
 
-    const result = await signIn(values.email, values.password);
+    try {
+      const result = await signIn(values.email, values.password);
 
-    if (result.error) {
-      setError(result.error);
-      setIsLoading(false);
-    } else {
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
       // Redirect will happen automatically via middleware after session is established
       // Force a hard navigation to ensure middleware runs
       const redirectPath = redirectTo || searchParams.get("redirect") || "/";
       window.location.href = redirectPath;
+    } catch (error) {
+      console.error("Error signing in", error);
+      setError("Something went wrong while signing in. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -95,20 +106,27 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     setIsLoading(true);
     setError(null);
 
-    const result = await signUp(values.email, values.password);
+    try {
+      const result = await signUp(values.email, values.password);
 
-    if (result.error) {
-      setError(result.error);
-      setIsLoading(false);
-    } else {
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
       // After signup, user might need to verify their email
       // For now, we'll just show a success message and switch to login
-      setError(null);
       setIsLogin(true);
-      setIsLoading(false);
       loginForm.setValue("email", values.email);
       // Show a message that they should check their email (if email confirmation is enabled)
       // or that they can now log in
+    } catch (error) {
+      console.error("Error signing up", error);
+      setError(
+        "Something went wrong while creating your account. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -116,16 +134,26 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     setIsLoading(true);
     setError(null);
 
-    const result = await signInWithGoogle();
+    try {
+      const result = await signInWithGoogle();
 
-    if (result.error) {
-      setError(result.error);
-      setIsLoading(false);
-    } else if (result.url) {
-      // Redirect to Google OAuth URL
-      window.location.href = result.url;
-    } else {
-      setError("Failed to initiate Google sign-in");
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (result.url) {
+        // Redirect to Google OAuth URL
+        window.location.href = result.url;
+      } else {
+        setError("Failed to initiate Google sign-in");
+      }
+    } catch (error) {
+      console.error("Error signing in with Google", error);
+      setError(
+        "Something went wrong while connecting to Google. Please try again."
+      );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -148,7 +176,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
         )}
 
         {isLogin ? (
-          <Form {...loginForm}>
+          <Form {...loginForm} key="login">
             <form
               onSubmit={loginForm.handleSubmit(onLoginSubmit)}
               className="space-y-4"
@@ -189,17 +217,13 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
                   </FormItem>
                 )}
               />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </Form>
         ) : (
-          <Form {...signupForm}>
+          <Form {...signupForm} key="signup">
             <form
               onSubmit={signupForm.handleSubmit(onSignupSubmit)}
               className="space-y-4"
@@ -258,11 +282,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
                   </FormItem>
                 )}
               />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
             </form>
@@ -326,4 +346,3 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     </Card>
   );
 }
-

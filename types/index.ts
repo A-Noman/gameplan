@@ -10,6 +10,7 @@ export type Event = {
   event_date: string;
   description: string | null;
   venue: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
 };
