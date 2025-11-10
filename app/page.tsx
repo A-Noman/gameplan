@@ -18,11 +18,16 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EventCard } from "@/components/events/event-card";
 import { DEFAULT_EVENT_TYPES } from "@/lib/constants/events";
+import { MyEventsToggle } from "@/components/events/my-events-toggle";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ eventType?: string; search?: string }>;
+  searchParams: Promise<{
+    eventType?: string;
+    search?: string;
+    myEvents?: string;
+  }>;
 }) {
   const supabase = await createClient();
   const {
@@ -43,12 +48,13 @@ export default async function Home({
   const params = await searchParams;
   const eventTypeFilter = params.eventType;
   const searchQuery = params.search;
+  const showOnlyMine = params.myEvents === "true";
 
   // Fetch unique event types and events if user has a name
   const [eventTypesResult, eventsResult] = hasName
     ? await Promise.all([
         getUniqueEventTypes(),
-        getEvents(eventTypeFilter, searchQuery),
+        getEvents(eventTypeFilter, searchQuery, showOnlyMine),
       ])
     : [
         { eventTypes: null, error: null },
@@ -69,16 +75,19 @@ export default async function Home({
           <h1 className="text-4xl font-bold">GamePlan</h1>
           <div className="flex items-center gap-3">
             {hasName && (
-              <EventFormDialog
-                mode="create"
-                eventTypes={availableEventTypes}
-                trigger={
-                  <Button size="sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Event
-                  </Button>
-                }
-              />
+              <>
+                <MyEventsToggle />
+                <EventFormDialog
+                  mode="create"
+                  eventTypes={availableEventTypes}
+                  trigger={
+                    <Button size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Event
+                    </Button>
+                  }
+                />
+              </>
             )}
             <LogoutButton />
           </div>

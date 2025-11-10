@@ -18,7 +18,11 @@ type NormalizedEventPayload = Omit<EventFormValues, "description"> & {
   description: string | null;
 };
 
-export async function getEvents(eventType?: string, searchTerm?: string) {
+export async function getEvents(
+  eventType?: string,
+  searchTerm?: string,
+  onlyMine?: boolean
+) {
   const supabase = await createClient();
 
   const {
@@ -46,6 +50,10 @@ export async function getEvents(eventType?: string, searchTerm?: string) {
 
   if (trimmedSearch) {
     query = query.ilike("name", `%${trimmedSearch}%`);
+  }
+
+  if (onlyMine) {
+    query = query.eq("created_by", user.id);
   }
 
   const { data: events, error } = await query.order("event_date", {
