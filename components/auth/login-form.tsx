@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signIn, signUp, signInWithGoogle } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import { GoogleColorIcon } from "@/components/icons/google-color-icon";
+
 import {
   Card,
   CardContent,
@@ -87,19 +89,17 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
       if (result.error) {
         setError(result.error);
+      } else {
+        const redirectPath = redirectTo || searchParams.get("redirect") || "/";
+        router.replace(redirectPath);
         return;
       }
-
-      // Redirect will happen automatically via middleware after session is established
-      // Force a hard navigation to ensure middleware runs
-      const redirectPath = redirectTo || searchParams.get("redirect") || "/";
-      window.location.href = redirectPath;
     } catch (error) {
       console.error("Error signing in", error);
       setError("Something went wrong while signing in. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   const onSignupSubmit = async (values: SignupFormValues) => {
@@ -111,23 +111,18 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
       if (result.error) {
         setError(result.error);
-        return;
+      } else {
+        setIsLogin(true);
+        loginForm.setValue("email", values.email);
       }
-
-      // After signup, user might need to verify their email
-      // For now, we'll just show a success message and switch to login
-      setIsLogin(true);
-      loginForm.setValue("email", values.email);
-      // Show a message that they should check their email (if email confirmation is enabled)
-      // or that they can now log in
     } catch (error) {
       console.error("Error signing up", error);
       setError(
         "Something went wrong while creating your account. Please try again."
       );
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   const onGoogleSignIn = async () => {
@@ -139,12 +134,9 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
       if (result.error) {
         setError(result.error);
-        return;
-      }
-
-      if (result.url) {
-        // Redirect to Google OAuth URL
+      } else if (result.url) {
         window.location.href = result.url;
+        return;
       } else {
         setError("Failed to initiate Google sign-in");
       }
@@ -153,15 +145,17 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
       setError(
         "Something went wrong while connecting to Google. Please try again."
       );
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isLogin ? "Welcome back" : "Create an account"}</CardTitle>
+        <CardTitle>
+          {isLogin ? "Welcome back 🚀" : "Create an account 📝"}
+        </CardTitle>
         <CardDescription>
           {isLogin
             ? "Sign in to your account to continue"
@@ -307,21 +301,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
           onClick={onGoogleSignIn}
           disabled={isLoading}
         >
-          <svg
-            className="mr-2 h-4 w-4"
-            aria-hidden="true"
-            focusable="false"
-            data-prefix="fab"
-            data-icon="google"
-            role="img"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 488 512"
-          >
-            <path
-              fill="currentColor"
-              d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 52.6 94.3 256s164.2 203.4 252.5 182.9c41.5-13.7 71.4-46.8 82.7-84.2H248v-85.9h240z"
-            ></path>
-          </svg>
+          <GoogleColorIcon className="mr-2 h-4 w-4" />
           Google
         </Button>
       </CardContent>
