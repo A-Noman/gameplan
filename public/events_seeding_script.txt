@@ -1,0 +1,190 @@
+-- Profiles table
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(user_id)
+);
+
+-- Create index on user_id for faster queries
+CREATE INDEX IF NOT EXISTS profiles_user_id_idx ON profiles(user_id);
+
+-- Create updated_at trigger to automatically update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable RLS on profiles table
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+
+-- Policy: Users can read their own profile
+CREATE POLICY "Users can read own profile"
+  ON profiles
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Policy: Users can insert their own profile
+CREATE POLICY "Users can insert own profile"
+  ON profiles
+  FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Users can update their own profile
+CREATE POLICY "Users can update own profile"
+  ON profiles
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Create the events table 
+-- Create events table
+CREATE TABLE IF NOT EXISTS events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  event_date TIMESTAMPTZ NOT NULL,
+  description TEXT,
+  venue TEXT NOT NULL,
+  created_by UUID REFERENCES profiles(user_id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Create index on event_type for faster filtering
+CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
+
+-- Create index on event_date for faster sorting
+CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date);
+
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically update updated_at
+CREATE TRIGGER update_events_updated_at
+  BEFORE UPDATE ON events
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Row Level Security
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+
+-- Create policy to allow all authenticated users to read events
+-- For a read-only view, we'll allow SELECT for authenticated users
+CREATE POLICY "Events are viewable by authenticated users"
+  ON events
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- Note: If you want to allow public read access (unauthenticated users),
+-- uncomment the following policy instead:
+-- CREATE POLICY "Events are viewable by everyone"
+--   ON events
+--   FOR SELECT
+--   USING (true);
+
+-- For future: If you need to allow insert/update/delete, you can add policies like:
+-- CREATE POLICY "Events can be created by authenticated users"
+--   ON events
+--   FOR INSERT
+--   TO authenticated
+--   WITH CHECK (true);
+
+-- CREATE POLICY "Events can be updated by authenticated users"
+--   ON events
+--   FOR UPDATE
+--   TO authenticated
+--   USING (true);
+
+-- CREATE POLICY "Events can be deleted by authenticated users"
+--   ON events
+--   FOR DELETE
+--   TO authenticated
+--   USING (true);
+
+
+
+-- Seed event data with 50 events
+-- All events are scheduled after November 9th, 2025
+-- Replace the created_by values below with real user IDs (matching profiles.user_id) as needed.
+
+INSERT INTO events (name, event_type, event_date, description, venue, created_by)
+VALUES
+  -- November 2025
+  ('Premier League: Manchester United vs Liverpool', 'Soccer', '2025-11-15 15:00:00+00', 'High-stakes Premier League match between two historic rivals', 'Old Trafford, Manchester', NULL),
+  ('NBA Regular Season: Lakers vs Warriors', 'Basketball', '2025-11-16 20:00:00+00', 'Western Conference showdown featuring two powerhouse teams', 'Crypto.com Arena, Los Angeles', NULL),
+  ('NFL: Dallas Cowboys vs Philadelphia Eagles', 'Football', '2025-11-17 17:00:00+00', 'NFC East division rivalry game', 'AT&T Stadium, Arlington', NULL),
+  ('ATP Finals - Day 1', 'Tennis', '2025-11-18 14:00:00+00', 'Opening day of the ATP World Tour Finals', 'Pala Alpitour, Turin', NULL),
+  ('NHL: Toronto Maple Leafs vs Montreal Canadiens', 'Hockey', '2025-11-19 19:00:00+00', 'Classic Canadian hockey rivalry', 'Scotiabank Arena, Toronto', NULL),
+  ('La Liga: Real Madrid vs Barcelona', 'Soccer', '2025-11-20 20:00:00+00', 'El Clasico - The biggest match in Spanish football', 'Santiago Bernabéu, Madrid', NULL),
+  ('MLB Offseason: Winter Meetings', 'Baseball', '2025-11-21 09:00:00+00', 'Annual gathering of MLB executives and agents', 'Gaylord Opryland, Nashville', NULL),
+  ('UFC 300: Lightweight Championship', 'MMA', '2025-11-22 22:00:00+00', 'Main event featuring the lightweight title fight', 'T-Mobile Arena, Las Vegas', NULL),
+  ('College Football: Alabama vs Auburn', 'Football', '2025-11-23 15:30:00+00', 'The Iron Bowl - One of college football''s greatest rivalries', 'Bryant-Denny Stadium, Tuscaloosa', NULL),
+  ('Champions League: Group Stage Matchday 5', 'Soccer', '2025-11-25 20:00:00+00', 'Crucial group stage matches across Europe', 'Various Venues, Europe', NULL),
+  
+  -- December 2025
+  ('NBA: Christmas Day Games', 'Basketball', '2025-12-25 12:00:00+00', 'Annual NBA Christmas Day showcase featuring top teams', 'Various NBA Arenas', NULL),
+  ('NFL: Monday Night Football', 'Football', '2025-12-01 20:15:00+00', 'Prime time NFL matchup', 'Lambeau Field, Green Bay', NULL),
+  ('Serie A: AC Milan vs Inter Milan', 'Soccer', '2025-12-02 20:45:00+00', 'Derby della Madonnina - Milan city derby', 'San Siro, Milan', NULL),
+  ('NHL: Winter Classic', 'Hockey', '2025-12-03 14:00:00+00', 'Annual outdoor NHL game', 'Fenway Park, Boston', NULL),
+  ('ATP Finals - Championship Match', 'Tennis', '2025-12-04 18:00:00+00', 'Final match of the ATP World Tour Finals', 'Pala Alpitour, Turin', NULL),
+  ('Premier League: Arsenal vs Chelsea', 'Soccer', '2025-12-06 12:30:00+00', 'London derby between two Premier League giants', 'Emirates Stadium, London', NULL),
+  ('College Basketball: Duke vs North Carolina', 'Basketball', '2025-12-07 19:00:00+00', 'The greatest rivalry in college basketball', 'Cameron Indoor Stadium, Durham', NULL),
+  ('NFL: Thursday Night Football', 'Football', '2025-12-11 20:20:00+00', 'Prime time NFL action', 'SoFi Stadium, Los Angeles', NULL),
+  ('Bundesliga: Bayern Munich vs Borussia Dortmund', 'Soccer', '2025-12-13 17:30:00+00', 'Der Klassiker - Germany''s biggest football match', 'Allianz Arena, Munich', NULL),
+  ('NBA: In-Season Tournament Finals', 'Basketball', '2025-12-14 20:30:00+00', 'Championship game of the NBA In-Season Tournament', 'TBD', NULL),
+  
+  -- January 2026
+  ('NFL: Wild Card Weekend', 'Football', '2026-01-04 13:00:00+00', 'Opening weekend of the NFL playoffs', 'Various NFL Stadiums', NULL),
+  ('College Football: National Championship', 'Football', '2026-01-12 20:00:00+00', 'College Football Playoff National Championship', 'Mercedes-Benz Stadium, Atlanta', NULL),
+  ('Australian Open - Day 1', 'Tennis', '2026-01-19 00:00:00+11', 'First Grand Slam of the year begins', 'Melbourne Park, Melbourne', NULL),
+  ('Premier League: Manchester City vs Arsenal', 'Soccer', '2026-01-24 17:30:00+00', 'Top of the table clash', 'Etihad Stadium, Manchester', NULL),
+  ('NBA: All-Star Weekend', 'Basketball', '2026-01-25 19:00:00+00', 'NBA All-Star Game and festivities', 'Crypto.com Arena, Los Angeles', NULL),
+  ('NHL: All-Star Game', 'Hockey', '2026-01-26 15:00:00+00', 'NHL All-Star Game and Skills Competition', 'T-Mobile Arena, Las Vegas', NULL),
+  ('Super Bowl LX', 'Football', '2026-01-31 18:30:00+00', 'The biggest event in American sports', 'Mercedes-Benz Stadium, Atlanta', NULL),
+  ('La Liga: Atletico Madrid vs Real Madrid', 'Soccer', '2026-01-18 16:15:00+00', 'Madrid derby', 'Wanda Metropolitano, Madrid', NULL),
+  ('ATP: Australian Open Men''s Final', 'Tennis', '2026-02-01 19:30:00+11', 'Men''s singles championship match', 'Rod Laver Arena, Melbourne', NULL),
+  ('WTA: Australian Open Women''s Final', 'Tennis', '2026-02-02 19:30:00+11', 'Women''s singles championship match', 'Rod Laver Arena, Melbourne', NULL),
+  
+  -- February 2026
+  ('NFL: Pro Bowl', 'Football', '2026-02-08 15:00:00+00', 'NFL All-Star Game', 'Camping World Stadium, Orlando', NULL),
+  ('Premier League: Tottenham vs Chelsea', 'Soccer', '2026-02-14 15:00:00+00', 'London derby', 'Tottenham Hotspur Stadium, London', NULL),
+  ('NBA: Trade Deadline Day', 'Basketball', '2026-02-12 15:00:00+00', 'NBA trade deadline - last day for trades', 'League Wide', NULL),
+  ('Champions League: Round of 16 - Leg 1', 'Soccer', '2026-02-17 20:00:00+00', 'First legs of the Round of 16', 'Various Venues, Europe', NULL),
+  ('NHL: Stadium Series', 'Hockey', '2026-02-21 20:00:00+00', 'Outdoor NHL game', 'MetLife Stadium, East Rutherford', NULL),
+  ('College Basketball: March Madness Selection Sunday', 'Basketball', '2026-02-22 18:00:00+00', 'NCAA Tournament bracket reveal', 'CBS Broadcast', NULL),
+  ('Serie A: Juventus vs Napoli', 'Soccer', '2026-02-28 20:45:00+00', 'Top Italian teams face off', 'Allianz Stadium, Turin', NULL),
+  ('ATP: Dubai Tennis Championships', 'Tennis', '2026-02-23 14:00:00+04', 'ATP 500 tournament', 'Dubai Duty Free Tennis Stadium', NULL),
+  ('UFC 301: Welterweight Championship', 'MMA', '2026-02-15 22:00:00+00', 'UFC welterweight title fight', 'T-Mobile Arena, Las Vegas', NULL),
+  ('Premier League: Liverpool vs Manchester City', 'Soccer', '2026-02-07 16:30:00+00', 'Premier League title race clash', 'Anfield, Liverpool', NULL),
+  
+  -- March 2026
+  ('NCAA Basketball: March Madness - First Round', 'Basketball', '2026-03-19 12:00:00+00', 'NCAA Tournament begins', 'Various Venues', NULL),
+  ('Champions League: Round of 16 - Leg 2', 'Soccer', '2026-03-10 20:00:00+00', 'Second legs of the Round of 16', 'Various Venues, Europe', NULL),
+  ('NFL: Free Agency Begins', 'Football', '2026-03-11 16:00:00+00', 'NFL free agency period opens', 'League Wide', NULL),
+  ('ATP: Indian Wells Masters', 'Tennis', '2026-03-12 14:00:00-07', 'ATP Masters 1000 tournament', 'Indian Wells Tennis Garden, California', NULL),
+  ('NBA: Regular Season Finale', 'Basketball', '2026-03-15 19:00:00+00', 'Last day of NBA regular season', 'Various NBA Arenas', NULL),
+  ('NHL: Trade Deadline Day', 'Hockey', '2026-03-03 15:00:00+00', 'NHL trade deadline', 'League Wide', NULL),
+  ('Premier League: FA Cup Quarterfinals', 'Soccer', '2026-03-08 15:00:00+00', 'FA Cup quarterfinal matches', 'Various Venues, England', NULL),
+  ('MLB: Opening Day', 'Baseball', '2026-03-26 13:05:00+00', 'Major League Baseball season begins', 'Various MLB Ballparks', NULL),
+  ('NCAA Basketball: Final Four', 'Basketball', '2026-03-28 18:09:00+00', 'NCAA Tournament Final Four', 'Lucas Oil Stadium, Indianapolis', NULL),
+  ('Champions League: Quarterfinals - Leg 1', 'Soccer', '2026-03-31 20:00:00+00', 'First legs of the quarterfinals', 'Various Venues, Europe', NULL);
+

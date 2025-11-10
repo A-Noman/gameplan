@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/card";
 import { EventFilter } from "@/components/events/event-filter";
 import { Suspense } from "react";
+import { EventFormDialog } from "@/components/events/event-form-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { EventCard } from "@/components/events/event-card";
+import { DEFAULT_EVENT_TYPES } from "@/lib/constants/events";
 
 export default async function Home({
   searchParams,
@@ -50,18 +55,33 @@ export default async function Home({
         { events: null, error: null },
       ];
 
-  const eventTypes = eventTypesResult.eventTypes || [];
+  const dbEventTypes = eventTypesResult.eventTypes || [];
   const eventsError = eventsResult.error;
   const events = eventsResult.events;
+  const availableEventTypes = Array.from(
+    new Set([...dbEventTypes, ...DEFAULT_EVENT_TYPES])
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <main className="flex min-h-screen flex-col p-8">
       <div className="max-w-7xl w-full mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">GamePlan</h1>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-4xl font-bold">GamePlan</h1>
+          <div className="flex items-center gap-3">
+            {hasName && (
+              <EventFormDialog
+                mode="create"
+                eventTypes={availableEventTypes}
+                trigger={
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Event
+                  </Button>
+                }
+              />
+            )}
+            <LogoutButton />
           </div>
-          <LogoutButton />
         </div>
 
         {!hasName ? (
@@ -91,7 +111,7 @@ export default async function Home({
             </div>
 
             {/* Event Filter */}
-            {eventTypes.length > 0 && (
+            {dbEventTypes.length > 0 && (
               <div className="mb-6">
                 <Suspense
                   fallback={
@@ -99,7 +119,7 @@ export default async function Home({
                   }
                 >
                   <EventFilter
-                    eventTypes={eventTypes}
+                    eventTypes={dbEventTypes}
                     label="Filter by Sport"
                   />
                 </Suspense>
@@ -134,39 +154,12 @@ export default async function Home({
             {!eventsError && events && events.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {events.map((event) => (
-                  <Card key={event.id} className="flex flex-col">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-xl">{event.name}</CardTitle>
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                          {event.event_type}
-                        </span>
-                      </div>
-                      <CardDescription>
-                        {new Date(event.event_date).toLocaleDateString(
-                          "en-US",
-                          {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 flex flex-col">
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                          {event.description}
-                        </p>
-                      )}
-                      <div className="mt-auto pt-4 border-t">
-                        <p className="text-sm font-medium">📍 {event.venue}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    eventTypes={availableEventTypes}
+                    currentUserId={user.id}
+                  />
                 ))}
               </div>
             )}
