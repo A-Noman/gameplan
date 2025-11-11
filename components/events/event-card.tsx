@@ -40,7 +40,7 @@ export function EventCard({
     return `${slug.length > 0 ? slug : "event"}-${event.id}.ics`;
   }, [event.id, event.name]);
 
-  const handleAddToCalendar = () => {
+  const handleAddToCalendar = async () => {
     try {
       const icsContent = buildICSFromEvent(event, {
         eventUrl: window.location.href,
@@ -49,6 +49,42 @@ export function EventCard({
       const blob = new Blob([icsContent], {
         type: "text/calendar;charset=utf-8",
       });
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        !(window as unknown as { MSStream?: unknown }).MSStream;
+      const file = new File([blob], calendarFileName, {
+        type: "text/calendar;charset=utf-8",
+      });
+
+      const canShareFile =
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [file] });
+      if (typeof navigator.share === "function" && canShareFile) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: event.name,
+            text: event.description ?? undefined,
+          });
+          toast.success("Calendar invite shared.");
+          return;
+        } catch (shareError) {
+          if ((shareError as Error).name === "AbortError") {
+            return;
+          }
+          throw shareError;
+        }
+      }
+
+      if (isIOS) {
+        const dataUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(
+          icsContent
+        )}`;
+        window.location.href = dataUrl;
+        toast.success("Calendar invite opened.");
+        return;
+      }
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
